@@ -1,0 +1,47 @@
+# ══════════════════════════════════════════════════════════════════
+#  config.yaml — Container Stowage RL (v15) VESSL 실험 설정
+#  · train_ppo.py 가 이 파일을 읽어 CONFIG/POLICIES 를 덮어씀
+#  · VESSL Batch Job 의 argument 로 --config config.yaml 전달
+# ══════════════════════════════════════════════════════════════════
+
+experiment_name: single_bay_6pod_ppo_v15_SF
+
+# ── 재현성 ──
+# 단일 시드 파일럿: [42]
+# SCIE 다중시드 재현성: [42, 123, 456, 2024]
+seeds: [42]
+
+# ── 출력 경로 ──
+# VESSL Batch Job 에서 /shared 또는 마운트된 볼륨 경로로 지정
+# 비우면 train_ppo.py 가 env VESSL_OUTPUT_DIR → /shared → ./results_vessl 순으로 폴백
+output_base: ""        # 예: /shared/stowage_v15
+
+# ── 학습할 정책 (ES / SF / EF / BL 중 일부 또는 전체) ──
+# 빠른 검증은 ["SF","EF"] 처럼 줄여서 실행 가능
+policies: ["SF"]    # 필수 + 안정 그룹 (Safety-First)
+
+# ── 커리큘럼 레벨별 에피소드 예산 (스텝 아님) ──
+# 정식 실험값. 빠른 스모크는 아래 값을 작게 (예: 200/...) 줄이면 됨
+episodes_per_level:
+  1: 20000
+  2: 25000
+  3: 32000
+  4: 48000
+
+total_rounds: 4
+
+# ── PPO 하이퍼파라미터 (지정한 키만 코드 기본값을 덮어씀) ──
+# 코드 내부 키 이름과 동일하게 작성 (learning_rate 만 lr 로 자동 매핑)
+ppo:
+  learning_rate: 0.0003
+  n_steps: 2048
+  batch_size: 64
+  n_epochs: 10
+  gamma: 0.99
+  gae_lambda: 0.95
+  ent_coef: 0.0
+
+# ── 로깅 ──
+save_tensorboard: true
+save_checkpoints: true
+save_excel: true
