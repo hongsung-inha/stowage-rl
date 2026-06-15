@@ -18,7 +18,7 @@ resources:
 
 # ── 코드 마운트 (GitHub 사용 시). 저장소가 없으면 콘솔에서 코드 업로드 ──
 import:
-  /root/code: git://github.com/<YOUR_ID>/<YOUR_REPO>
+  /root/code: git://github.com/hongsung-inha/stowage-rl
 
 # ── 출력 볼륨 (영구 보존) ──
 volumes:
