@@ -1,0 +1,43 @@
+# ══════════════════════════════════════════════════════════════════
+#  vessl_run_ES.yaml — VESSL Batch Run (정책 ES 단독)
+#  실행:  vessl run create -f vessl_run_ES.yaml
+#  · 4개 정책을 각각 별도 Job 으로 병렬 제출하기 위한 파일
+#  · resources.cluster / preset / import 의 git 주소를 본인 환경에 맞게 수정
+# ══════════════════════════════════════════════════════════════════
+
+name: stowage-ppo-v15-es
+description: "Container stowage PPO v15 — policy ES (단독 Job)"
+
+# ── 실행 환경 (노트북에서 검증된 A100 호환 PyTorch 이미지) ──
+image: quay.io/vessl-ai/torch:2.3.1-cuda12.1-r5
+
+# ── 리소스 (본인 클러스터/preset 으로 교체) ──
+resources:
+  cluster: vessl-gcp-oregon        # ← 본인 클러스터명
+  preset: gpu-l4-small             # ← 본인 GPU preset (A100:1 등)
+
+# ── 코드 마운트 (GitHub 사용 시). 저장소가 없으면 콘솔에서 코드 업로드 ──
+import:
+  /root/code: git://github.com/hongsung-inha/stowage-rl
+
+# ── 출력 볼륨 (영구 보존) ──
+volumes:
+  /output:
+    artifact: true
+
+# ── 코드가 /output 을 OUTPUT_BASE 로 인식 ──
+env:
+  VESSL_OUTPUT_DIR: /output
+
+# ── 실행 명령 ──
+#   · 폰트 도구(fontconfig, fonts-nanum)를 미리 설치해 fc-cache 오류 예방
+#   · requirements.txt 에 scipy 포함됨
+run:
+  - workdir: /root/code
+    command: |
+      apt-get update && apt-get install -y fontconfig fonts-nanum || true
+      pip install -r requirements.txt
+      python train_ppo.py --config config_ES.yaml --output_base /output
+
+# 중간 산출물 회수가 필요하면 주석 해제
+# termination_protect: true
