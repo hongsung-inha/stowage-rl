@@ -1,0 +1,52 @@
+# ══════════════════════════════════════════════════════════════════
+#  vessl_train.yaml — 정책 1개 학습 (VESSL 배치 잡)
+#
+#  6개 정책을 "병렬"로 돌리려면 이 잡을 6번 제출하되, 매번
+#  env.POLICY_NAME 값만 바꾼다 (아래 6개 중 하나):
+#     ES / SF_9_EF_1 / SF_7_EF_3 / BL_SF_5_EF_5 / EF_7_SF_3 / EF_9_SF_1
+#
+#  CLI 예시 (정책마다 한 줄씩 = 6개 잡 동시 실행):
+#     vessl run create -f vessl_train.yaml --env POLICY_NAME=ES
+#     vessl run create -f vessl_train.yaml --env POLICY_NAME=SF_9_EF_1
+#     vessl run create -f vessl_train.yaml --env POLICY_NAME=SF_7_EF_3
+#     vessl run create -f vessl_train.yaml --env POLICY_NAME=BL_SF_5_EF_5
+#     vessl run create -f vessl_train.yaml --env POLICY_NAME=EF_7_SF_3
+#     vessl run create -f vessl_train.yaml --env POLICY_NAME=EF_9_SF_1
+#
+#  ※ 6개 잡이 같은 object storage 볼륨(stowage-output)을 /output 에 마운트해
+#    각자 /output/<POLICY_NAME>/ 폴더에 결과를 저장한다 (충돌 없음).
+# ══════════════════════════════════════════════════════════════════
+name: stowage-v17-train
+description: "Single-policy PPO training (one of 6 weighted scenarios)"
+
+resources:
+  cluster: vessl-gcp-oregon          # ← 사용 클러스터로 교체
+  preset: gpu-a100-small             # ← A100 1장 프리셋으로 교체
+
+image: quay.io/vessl-ai/torch:2.3.1-cuda12.1
+
+import:
+  /root/code/:
+    git:
+      url: https://github.com/hongsung-inha/stowage-rl   # ← 본인 repo (public)
+      ref: main
+
+export:
+  /output/:
+    # VESSL object storage 볼륨 (6개 잡이 공유) — 결과 영속화
+    volume: stowage-output           # ← 생성한 볼륨명으로 교체
+
+run:
+  - workdir: /root/code
+    command: |
+      set -e
+      apt-get update && apt-get install -y fonts-nanum fontconfig || true
+      fc-cache -fv || true
+      pip install -r requirements.txt
+      echo "▶ Training policy: ${POLICY_NAME}"
+      OUTPUT_ROOT=/output SEED=${SEED:-42} POLICY_NAME=${POLICY_NAME} \
+        python train_policy.py
+
+env:
+  POLICY_NAME: ES        # ← 제출 시 --env POLICY_NAME=... 로 덮어씀
+  SEED: "42"
